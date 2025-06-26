@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FlightFinder</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      background: #eef6ff;
+    }
+
+    h1 {
+      text-align: center;
+      color: #004e8c;
+    }
+
+    .search-box, .info, .actions {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    select, input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .results, .bookings {
+      margin-top: 30px;
+    }
+
+    .flight-card, .booking-card {
+      background: #ffffff;
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin: 10px auto;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .approved-btn {
+      background-color: #28a745;
+      color: white;
+      margin-right: 10px;
+    }
+
+    .book-btn {
+      background-color: #0077b6;
+      color: white;
+    }
+
+    .view-btn {
+      background-color: #6c757d;
+      color: white;
+    }
+
+    .clear-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .approved-btn:hover { background-color: #218838; }
+    .book-btn:hover { background-color: #005f87; }
+    .view-btn:hover { background-color: #5a6268; }
+    .clear-btn:hover { background-color: #c82333; }
+
+    #passengerName {
+      width: 250px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>FlightFinder</h1>
+
+  <div class="info">
+    <input type="text" id="passengerName" placeholder="Enter passenger name">
+  </div>
+
+  <div class="search-box">
+    <select id="from">
+      <option value="">Select From</option>
+      <option>Delhi</option>
+      <option>Mumbai</option>
+      <option>Chennai</option>
+      <option>Kolkata</option>
+      <option>Bangalore</option>
+      <option>Hyderabad</option>
+    </select>
+
+    <select id="to">
+      <option value="">Select To</option>
+      <option>Delhi</option>
+      <option>Mumbai</option>
+      <option>Chennai</option>
+      <option>Kolkata</option>
+      <option>Bangalore</option>
+      <option>Hyderabad</option>
+    </select>
+
+    <input type="date" id="date">
+
+    <button class="btn book-btn" onclick="searchFlights()">Search Flights</button>
+  </div>
+
+  <div class="actions">
+    <button class="btn view-btn" onclick="showBookings()">View My Bookings</button>
+    <button class="btn clear-btn" onclick="clearBookings()">Clear Bookings</button>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <div class="bookings" id="bookings"></div>
+
+  <script>
+    function getRandomFlights(from, to, date) {
+      const times = ["9:00 AM", "1:30 PM", "6:45 PM"];
+      const flights = [];
+
+      for (let i = 0; i < times.length; i++) {
+        flights.push({
+          from: from,
+          to: to,
+          date: date,
+          flightNumber: `AI${Math.floor(Math.random() * 900 + 100)}`,
+          time: times[i]
+        });
+      }
+      return flights;
+    }
+
+    function convertTo24Hour(timeStr) {
+      const [time, meridian] = timeStr.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
+      if (meridian === "PM" && hours < 12) hours += 12;
+      if (meridian === "AM" && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+
+    function searchFlights() {
+      const from = document.getElementById("from").value;
+      const to = document.getElementById("to").value;
+      const date = document.getElementById("date").value;
+      const resultsDiv = document.getElementById("results");
+
+      resultsDiv.innerHTML = "";
+      document.getElementById("bookings").innerHTML = "";
+
+      if (!from || !to || !date) {
+        resultsDiv.innerHTML = "<p style='color:red;'>Please select From, To and Date.</p>";
+        return;
+      }
+
+      if (from === to) {
+        resultsDiv.innerHTML = "<p style='color:red;'>From and To cannot be the same.</p>";
+        return;
+      }
+
+      const flights = getRandomFlights(from, to, date);
+      flights.sort((a, b) => convertTo24Hour(a.time) - convertTo24Hour(b.time));
+
+      flights.forEach(flight => {
+        const card = document.createElement("div");
+        card.className = "flight-card";
+        card.innerHTML = `
+          <p><strong>Flight:</strong> ${flight.flightNumber}</p>
+          <p><strong>From:</strong> ${flight.from}</p>
+          <p><strong>To:</strong> ${flight.to}</p>
+          <p><strong>Date:</strong> ${flight.date}</p>
+          <p><strong>Time:</strong> ${flight.time}</p>
+          <button class="btn approved-btn" onclick="approveFlight('${flight.flightNumber}', '${flight.from}', '${flight.to}', '${flight.date}', '${flight.time}')">Approved</button>
+          <button class="btn book-btn" onclick="bookFlight('${flight.flightNumber}')">Book</button>
+        `;
+        resultsDiv.appendChild(card);
+      });
+    }
+
+    function approveFlight(flightNumber, from, to, date, time) {
+      const name = document.getElementById("passengerName").value.trim();
+      if (name === "") {
+        alert("❌ Please enter passenger name before booking.");
+        return;
+      }
+
+      const booking = {
+        name,
+        flightNumber,
+        from,
+        to,
+        date,
+        time
+      };
+
+      let bookings = JSON.parse(localStorage.getItem("bookings")) || [];
+      bookings.push(booking);
+      localStorage.setItem("bookings", JSON.stringify(bookings));
+
+      alert(`✅ Booking successful for ${name} on flight ${flightNumber}`);
+    }
+
+    function bookFlight(flightNumber) {
+      alert(`📦 You clicked 'Book' for flight ${flightNumber}. Please click 'Approved' to confirm booking.`);
+    }
+
+    function showBookings() {
+      const bookingsDiv = document.getElementById("bookings");
+      bookingsDiv.innerHTML = "<h2 style='text-align:center;'>My Bookings</h2>";
+
+      const bookings = JSON.parse(localStorage.getItem("bookings")) || [];
+
+      if (bookings.length === 0) {
+        bookingsDiv.innerHTML += "<p style='text-align:center;'>No bookings found.</p>";
+        return;
+      }
+
+      bookings.forEach(booking => {
+        const card = document.createElement("div");
+        card.className = "booking-card";
+        card.innerHTML = `
+          <p><strong>Name:</strong> ${booking.name}</p>
+          <p><strong>Flight:</strong> ${booking.flightNumber}</p>
+          <p><strong>From:</strong> ${booking.from}</p>
+          <p><strong>To:</strong> ${booking.to}</p>
+          <p><strong>Date:</strong> ${booking.date}</p>
+          <p><strong>Time:</strong> ${booking.time}</p>
+        `;
+        bookingsDiv.appendChild(card);
+      });
+    }
+
+    function clearBookings() {
+      if (confirm("Are you sure you want to clear all bookings?")) {
+        localStorage.removeItem("bookings");
+        document.getElementById("bookings").innerHTML = "<p style='text-align:center;'>Bookings cleared.</p>";
+      }
+    }
+  </script>
+
+</body>
+</html>
